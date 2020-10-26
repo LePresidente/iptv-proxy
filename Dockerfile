@@ -2,6 +2,8 @@ FROM golang:1.14.4-alpine
 
 RUN apk add ca-certificates
 
+RUN apk add tzdata
+
 WORKDIR /go/src/github.com/pierre-emmanuelJ/iptv-proxy
 COPY . .
 RUN GO111MODULE=off CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o iptv-proxy .
