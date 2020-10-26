@@ -1,4 +1,4 @@
-FROM golang:1.14.4-alpine
+FROM golang:1.15.3-buster
 
 RUN apk add ca-certificates
 
