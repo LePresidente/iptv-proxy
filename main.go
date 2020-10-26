@@ -22,8 +22,6 @@ import "github.com/pierre-emmanuelJ/iptv-proxy/cmd"
 
 func main() {
 	cmd.Execute()
-	
-func main() {
    // manually set time zone
    if tz := os.Getenv("TZ"); tz != "" {
       var err error
