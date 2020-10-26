@@ -19,6 +19,11 @@
 package main
 
 import "github.com/pierre-emmanuelJ/iptv-proxy/cmd"
+import (
+   "fmt"
+   "time"
+   "log"	
+)
 
 func main() {
 	cmd.Execute()
