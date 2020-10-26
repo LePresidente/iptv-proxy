@@ -4,7 +4,7 @@ RUN apk add ca-certificates
 
 # Timezone (TZ)
 RUN apk add --no-cache tzdata
-ENV TZ America/Los_Angeles
+ENV TZ America/Chicago
 
 WORKDIR /go/src/github.com/pierre-emmanuelJ/iptv-proxy
 COPY . .
