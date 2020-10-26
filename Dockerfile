@@ -3,8 +3,8 @@ FROM golang:1.14.4-alpine
 RUN apk add ca-certificates
 
 # Timezone (TZ)
-RUN apk update && apk add --no-cache tzdata
-ENV TZ=America/Chicago
+RUN apk add --no-cache tzdata
+ENV TZ America/Los_Angeles
 
 WORKDIR /go/src/github.com/pierre-emmanuelJ/iptv-proxy
 COPY . .
