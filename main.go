@@ -18,7 +18,7 @@
 
 package main
 
-import "github.com/pierre-emmanuelJ/iptv-proxy/cmd"
+import "github.com/MCTyler/iptv-proxy/cmd"
 
 func main() {
 	cmd.Execute()
