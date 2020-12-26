@@ -1,4 +1,4 @@
-module github.com/pierre-emmanuelJ/iptv-proxy
+module github.com/MCTyler/iptv-proxy
 
 require (
 	github.com/gin-contrib/cors v0.0.0-20190226021855-50921afdc5c1
