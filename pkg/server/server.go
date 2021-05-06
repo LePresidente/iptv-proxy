@@ -19,9 +19,13 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/jamesnetherton/m3u"
@@ -32,7 +36,8 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var defaultProxyfiedM3UPath = "/tmp/" + uuid.NewV4().String() + ".iptv-proxy.m3u"
+var defaultProxyfiedM3UPath = filepath.Join(os.TempDir(), uuid.NewV4().String()+".iptv-proxy.m3u")
+var endpointAntiColision = strings.Split(uuid.NewV4().String(), "-")[0]
 
 // Config represent the server configuration
 type Config struct {
@@ -44,6 +49,8 @@ type Config struct {
 	track *m3u.Track
 	// path to the proxyfied m3u file
 	proxyfiedM3UPath string
+
+	endpointAntiColision string
 }
 
 // NewServer initialize a new server configuration
@@ -62,6 +69,7 @@ func NewServer(config *config.ProxyConfig) (*Config, error) {
 		&p,
 		nil,
 		defaultProxyfiedM3UPath,
+		endpointAntiColision,
 	}, nil
 }
 
@@ -95,32 +103,41 @@ func (c *Config) playlistInitialization() error {
 
 // MarshallInto a *bufio.Writer a Playlist.
 func (c *Config) marshallInto(into *os.File, xtream bool) error {
+	filteredTrack := make([]m3u.Track, 0, len(c.playlist.Tracks))
+
+	ret := 0
 	into.WriteString("#EXTM3U\n") // nolint: errcheck
-	for _, track := range c.playlist.Tracks {
-		into.WriteString("#EXTINF:")                       // nolint: errcheck
-		into.WriteString(fmt.Sprintf("%d ", track.Length)) // nolint: errcheck
+	for i, track := range c.playlist.Tracks {
+		var buffer bytes.Buffer
+
+		buffer.WriteString("#EXTINF:")                       // nolint: errcheck
+		buffer.WriteString(fmt.Sprintf("%d ", track.Length)) // nolint: errcheck
 		for i := range track.Tags {
 			if i == len(track.Tags)-1 {
-				into.WriteString(fmt.Sprintf("%s=%q", track.Tags[i].Name, track.Tags[i].Value)) // nolint: errcheck
+				buffer.WriteString(fmt.Sprintf("%s=%q", track.Tags[i].Name, track.Tags[i].Value)) // nolint: errcheck
 				continue
 			}
-			into.WriteString(fmt.Sprintf("%s=%q ", track.Tags[i].Name, track.Tags[i].Value)) // nolint: errcheck
+			buffer.WriteString(fmt.Sprintf("%s=%q ", track.Tags[i].Name, track.Tags[i].Value)) // nolint: errcheck
 		}
-		into.WriteString(", ") // nolint: errcheck
 
-		uri, err := c.replaceURL(track.URI, xtream)
+		uri, err := c.replaceURL(track.URI, i-ret, xtream)
 		if err != nil {
-			return err
+			ret++
+			log.Printf("ERROR: track: %s: %s", track.Name, err)
+			continue
 		}
 
-		into.WriteString(fmt.Sprintf("%s\n%s\n", track.Name, uri)) // nolint: errcheck
+		into.WriteString(fmt.Sprintf("%s, %s\n%s\n", buffer.String(), track.Name, uri)) // nolint: errcheck
+
+		filteredTrack = append(filteredTrack, track)
 	}
+	c.playlist.Tracks = filteredTrack
 
 	return into.Sync()
 }
 
 // ReplaceURL replace original playlist url by proxy url
-func (c *Config) replaceURL(uri string, xtream bool) (string, error) {
+func (c *Config) replaceURL(uri string, trackIndex int, xtream bool) (string, error) {
 	oriURL, err := url.Parse(uri)
 	if err != nil {
 		return "", err
@@ -131,15 +148,17 @@ func (c *Config) replaceURL(uri string, xtream bool) (string, error) {
 		protocol = "https"
 	}
 
-	customEnd := c.CustomEndpoint
+	customEnd := strings.Trim(c.CustomEndpoint, "/")
 	if customEnd != "" {
 		customEnd = fmt.Sprintf("/%s", customEnd)
 	}
 
-	path := oriURL.EscapedPath()
+	uriPath := oriURL.EscapedPath()
 	if xtream {
-		path = strings.ReplaceAll(path, c.XtreamUser.PathEscape(), c.User.PathEscape())
-		path = strings.ReplaceAll(path, c.XtreamPassword.PathEscape(), c.Password.PathEscape())
+		uriPath = strings.ReplaceAll(uriPath, c.XtreamUser.PathEscape(), c.User.PathEscape())
+		uriPath = strings.ReplaceAll(uriPath, c.XtreamPassword.PathEscape(), c.Password.PathEscape())
+	} else {
+		uriPath = path.Join("/", c.endpointAntiColision, c.User.PathEscape(), c.Password.PathEscape(), fmt.Sprintf("%d", trackIndex), path.Base(uriPath))
 	}
 
 	basicAuth := oriURL.User.String()
@@ -152,9 +171,9 @@ func (c *Config) replaceURL(uri string, xtream bool) (string, error) {
 		protocol,
 		basicAuth,
 		c.HostConfig.Hostname,
-		c.HostConfig.Port,
+		c.AdvertisedPort,
 		customEnd,
-		path,
+		uriPath,
 	)
 
 	newURL, err := url.Parse(newURI)
