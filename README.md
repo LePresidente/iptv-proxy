@@ -1,5 +1,8 @@
 # Iptv Proxy
 
+*** NOTE FROM LEPRESIDENTE ***
+Please note I have edited this proxy to work for my needs, if this does not work for you, please use the upstream providers repo
+
 [![Actions Status](https://github.com/pierre-emmanuelJ/iptv-proxy/workflows/CI/badge.svg)](https://github.com/pierre-emmanuelJ/iptv-proxy/actions?query=workflow%3ACI)
 
 ## Description

@@ -117,15 +117,16 @@ func (c *Config) xtreamStream(ctx *gin.Context, oriURL *url.URL) {
 
 	location, err := resp.Location()
 	if location != nil {
-		if !strings.Contains(location.String(), (fmt.Sprintf("/%s/%s", c.XtreamUser, c.XtreamPassword))) {
+		if !strings.Contains(location.String(), (fmt.Sprintf("live/%s/%s", c.XtreamUser, c.XtreamPassword))) {
 			c.streamclient(ctx, location)
 		} else {
-			id := ctx.Param("id")
-			if strings.HasSuffix(id, ".m3u8") {
-				c.hlsXtreamStream(ctx, oriURL)
+			if !strings.Contains(location.String(), (fmt.Sprintf("%s/live/%s/%s", c.XtreamBaseURL, c.XtreamUser, c.XtreamPassword))) {
+				id := ctx.Param("id")
+				if strings.HasSuffix(id, ".m3u8") {
+					c.hlsXtreamStream(ctx, location)
+				}
+				c.stream(ctx, location)
 			}
-
-			c.stream(ctx, oriURL)
 		}
 	} else {
 		id := ctx.Param("id")
